@@ -18,6 +18,8 @@ The pipeline: - Cleans and normalizes address data\
 CSV with columns: street, number, neighborhood, postal_code, city,
 state, country
 
+is necesary a API_KEY from the website geocode https://geocode.maps.co
+
 ## Usage
 
 bash geocode_pipeline.sh input.csv YOUR_API_KEY
