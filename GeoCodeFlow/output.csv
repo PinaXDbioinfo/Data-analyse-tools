@@ -1,0 +1,7 @@
+ids,street,number,neighborhood,zip_code,city,state,country,ID2,link,lat,lon
+1,Av. Constituyentes,123,Centro,76000,Querétaro,Querétaro,México,0,https://geocode.maps.co/search?q=AV+CONSTITUYENTES+123+CENTRO+76000+QUERETARO+QUERETARO+MEXICO&api_key=�,20.5852444,-100.3909635
+5,Av. Zaragoza,156,Centro,76000,Querétaro,Querétaro,México,0,https://geocode.maps.co/search?q=AV+ZARAGOZA+156+CENTRO+76000+QUERETARO+QUERETARO+MEXICO&api_key=�,20.5892596,-100.3886966
+6,Calle Morelos,34,El Pueblito,76900,Corregidora,Querétaro,México,0,https://geocode.maps.co/search?q=CALLE+MORELOS+34+EL+PUEBLITO+76900+CORREGIDORA+QUERETARO+MEXICO&api_key=�,20.5564143,-100.4343691
+6,Calle Morelos,34,El Pueblito,76900,Corregidora,Querétaro,México,1,https://geocode.maps.co/search?q=CALLE+MORELOS+34+EL+PUEBLITO+76900+CORREGIDORA+QUERETARO+MEXICO&api_key=�,20.5275252,-100.4639627
+7,Av. Tecnológico,500,Centro,76150,Querétaro,Querétaro,México,0,https://geocode.maps.co/search?q=AV+TECNOLOGICO+500+CENTRO+76150+QUERETARO+QUERETARO+MEXICO&api_key=�,20.5953488,-100.4069528
+7,Av. Tecnológico,500,Centro,76150,Querétaro,Querétaro,México,1,https://geocode.maps.co/search?q=AV+TECNOLOGICO+500+CENTRO+76150+QUERETARO+QUERETARO+MEXICO&api_key=�,20.5894252,-100.4043594
