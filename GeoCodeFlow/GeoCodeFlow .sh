@@ -84,7 +84,7 @@ write(link, file = "link.txt")
 
 echo "Downloading the json file with coordinates"
 URL=$(cat link.txt | tr -d '\r\n')
-wget -O "${real_id}.json" "${URL}"
+wget --timeout=10 --tries=3 -O "${real_id}.json" "${URL}"
 
 #making the link
 if [ -s "${real_id}.json" ]; then
