@@ -43,6 +43,11 @@ Rscript -e '
 args <- commandArgs(trailingOnly = TRUE)
 adress <- args[1]
 key <- args[2]
+
+if (!requireNamespace("stringi", quietly = TRUE)) {
+  install.packages("stringi", repos = "https://cloud.r-project.org")
+}
+
 library(stringi)
 
 quit_accent <- function(x) {
