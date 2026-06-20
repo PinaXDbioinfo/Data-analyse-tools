@@ -5,6 +5,33 @@
 file=$1
 api_key=$2
 
+#fdefine function
+extract_coordinates() {
+    local real_id="$1"
+    local URL="$2"
+    local dir="$3"
+
+    if [ -s "${real_id}.json" ]; then
+        local n2
+        n2=$(jq length "${real_id}.json")
+
+        echo "number of possible coordinates: ${n2}"
+
+        for ((j=0; j<n2; j++)); do
+            echo "extracting coordinate number: ${j} from json file"
+
+            local lat lon
+            lat=$(jq -r ".[${j}].lat" "${real_id}.json")
+            lon=$(jq -r ".[${j}].lon" "${real_id}.json")
+
+            echo "joining the coordinate to the coords.csv file"
+            echo "${real_id},${j},${URL},${lat},${lon}" >> "${dir}/results/coords.csv"
+        done
+    else
+        echo "${real_id},0,${URL},null,null" >> "${dir}/results/coords.csv"
+    fi
+}
+
 dir=$(pwd)
 mkdir -p "${dir}/logs"
 exec > >(tee -a "${dir}/logs/pipeline.log") 2> >(tee -a "${dir}/logs/error.log" >&2)
@@ -85,23 +112,102 @@ write(link, file = "link.txt")
 echo "Downloading the json file with coordinates"
 URL=$(cat link.txt | tr -d '\r\n')
 wget --timeout=10 --tries=3 -O "${real_id}.json" "${URL}"
+n2=$(jq length "${real_id}".json)
 
-#making the link
-if [ -s "${real_id}.json" ]; then
-    n2=$(jq length "${real_id}".json)
-    #othe if cicle  para si no hay coordenadas anexe un simple null
-    echo "number of posibble coordinates: ${n2}"
-    for j in $(seq 0 $((n2 - 1)))
-    do
-    echo "extracting coordinate number: ${j} from json file"
-    lat=$(jq -r ".[${j}].lat" "${real_id}".json)
-    lon=$(jq -r ".[${j}].lon" "${real_id}".json)
-    echo "joining the coordinate to the coords.csv file"
-    echo "${real_id},${j},${URL},${lat},${lon}" >> "${dir}/results/coords.csv"
-    done
-else
-    echo "Error: Fail in downloading the address: ${row}"
+# if not found coordinate try an approximate address
+if [ "$n2" -eq 0 ]; then
+    echo "*Coordinate not found, retrying an approximate coordinate*"
+
+    Rscript -e '
+    args <- commandArgs(trailingOnly = TRUE)
+    adress <- args[1]
+    key <- args[2]
+    library(stringi)
+
+    quit_accent <- function(x) {
+      x <- stri_replace_all_fixed(x, "ñ", "___enie___")
+      x <- stri_replace_all_fixed(x, "Ñ", "___ENIE___")
+      x <- stri_trans_general(x, "Latin-ASCII")
+      x <- stri_replace_all_fixed(x, "___enie___", "ñ")
+      x <- stri_replace_all_fixed(x, "___ENIE___", "Ñ")
+      return(x)
+    }
+
+    cols <- strsplit(adress, ",")[[1]]
+
+    cat("Cleaning the address\n")
+    s  <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[1])))))
+    c  <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[3])))))
+    z  <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[4])))))
+    ci <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[5])))))
+    st <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[6])))))
+    co <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[7])))))
+
+    link <- paste0(
+      "https://geocode.maps.co/search?q=",
+      s,"+",c,"+",z,"+",ci,"+",st,"+",co,
+      "&api_key=", key
+    )
+
+    write(link, file="link.txt")
+    ' "$row" "$api_key"
+
+    echo "Downloading the json file with coordinates"
+    URL=$(tr -d '\r\n' < link.txt)
+    wget --timeout=10 --tries=3 -O "${real_id}.json" "${URL}"
+
+    n2=$(jq length "${real_id}.json")
+
+    # second attempt
+    if [ "$n2" -eq 0 ]; then
+        echo "*Coordinate not found, retrying with a more approximate address*"
+
+        Rscript -e '
+        args <- commandArgs(trailingOnly = TRUE)
+        adress <- args[1]
+        key <- args[2]
+        library(stringi)
+
+        quit_accent <- function(x) {
+          x <- stri_replace_all_fixed(x, "ñ", "___enie___")
+          x <- stri_replace_all_fixed(x, "Ñ", "___ENIE___")
+          x <- stri_trans_general(x, "Latin-ASCII")
+          x <- stri_replace_all_fixed(x, "___enie___", "ñ")
+          x <- stri_replace_all_fixed(x, "___ENIE___", "Ñ")
+          return(x)
+        }
+
+        cols <- strsplit(adress, ",")[[1]]
+
+        cat("Cleaning the address\n")
+        c  <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[3])))))
+        z  <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[4])))))
+        ci <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[5])))))
+        st <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[6])))))
+        co <- gsub(" ","+",toupper(gsub("[./]","",quit_accent(trimws(cols[7])))))
+
+        link <- paste0(
+          "https://geocode.maps.co/search?q=",
+          c,"+",z,"+",ci,"+",st,"+",co,
+          "&api_key=", key
+        )
+
+        write(link, file="link.txt")
+        ' "$row" "$api_key"
+
+        echo "Downloading the json file with coordinates"
+        URL=$(tr -d '\r\n' < link.txt)
+        wget --timeout=10 --tries=3 -O "${real_id}.json" "${URL}"
+    fi
 fi
+
+# final processing
+if [ -s "${real_id}.json" ]; then
+    extract_coordinates "$real_id" "$URL" "$dir"
+else
+    echo "Error: Failed downloading the address: ${row}"
+fi
+
 mv "${real_id}.json" "${dir}/results/json_files"
 echo "deleting temp files"
 rm -f link.txt
